@@ -71,11 +71,11 @@ namespace IronBrew2.Obfuscator.Control_Flow
 							cEnd = c.InstructionMap[instr];
 							nIns = c.Instructions.Skip(cBegin).Take(cEnd - cBegin).ToList();
 							
-							Console.WriteLine("Test Preserve");
-							TestPreserve.DoInstructions(c, nIns);
+							//Console.WriteLine("Test Preserve");
+							//TestPreserve.DoInstructions(c, nIns);
 							
-							Console.WriteLine("EQ Mutate");
-							EQMutate.DoInstructions(c, c.Instructions.ToList());
+							//Console.WriteLine("EQ Mutate");
+							//EQMutate.DoInstructions(c, c.Instructions.ToList());
 							
 							break;
 						}	
