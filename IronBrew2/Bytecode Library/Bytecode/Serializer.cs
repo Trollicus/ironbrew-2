@@ -49,6 +49,9 @@ namespace IronBrew2.Bytecode_Library.Bytecode
 			void WriteInt32(int i) =>
 				Write(BitConverter.GetBytes(i));
 			
+			void WriteInt16(short i) =>
+				Write(BitConverter.GetBytes(i));
+			
 			void WriteNumber(double d) =>
 				Write(BitConverter.GetBytes(d));
 			
@@ -63,18 +66,14 @@ namespace IronBrew2.Bytecode_Library.Bytecode
 			void WriteBool(bool b) =>
 				Write(BitConverter.GetBytes(b));
 
-			int[] SerializeInstruction(Instruction inst)
+			void SerializeInstruction(Instruction inst)
 			{
-				inst.UpdateRegisters();
-							
 				if (inst.InstructionType == InstructionType.Data)
 				{
-					return new[]
-					       {
-						       _r.Next(),
-						       inst.Data
-					       };
+					WriteByte(1);
+					return;
 				}
+				inst.UpdateRegisters();
 
 				var cData = inst.CustomData;
 				int opCode = (int)inst.OpCode;
@@ -86,29 +85,57 @@ namespace IronBrew2.Bytecode_Library.Bytecode
 					opCode = cData.WrittenOpcode?.VIndex ?? virtualOpcode.VIndex;
 					virtualOpcode?.Mutate(inst);
 				}
+
+				int t = (int)inst.InstructionType;
+				int m = (int)inst.ConstantMask;
+				WriteByte((byte)((t << 1) | (m << 3)));
+				WriteInt16((short)opCode);
+				WriteInt16((short)inst.A);
 				
-				int a = inst.A;
 				int b = inst.B;
 				int c = inst.C;
+
+				switch (inst.InstructionType)
+				{
+					case InstructionType.AsBx:
+						b += 1 << 16;
+						WriteInt32(b);
+						break;
+					case InstructionType.AsBxC:
+						b += 1 << 16;
+						WriteInt32(b);
+						WriteInt16((short)c);
+						break;
+					case InstructionType.ABC:
+						WriteInt16((short)b);
+						WriteInt16((short)c);
+						break;
+					case InstructionType.ABx:
+						WriteInt32(b);
+						break;
+				}
 				
-				int result_i1 = 0;
-				int result_i2 = 0;
-
-				if (inst.InstructionType == InstructionType.AsBx || inst.InstructionType == InstructionType.AsBxC)
-					b += 1048575;
-			
-				result_i1 |= (byte) inst.InstructionType;
-				result_i1 |= ((a & 0x1FF) << 2);
-				result_i1 |= ((b & 0x1FF) << (2     + 9));
-				result_i1 |= (c           << (2 + 9 + 9));
-
-				result_i2 |= opCode;
-				result_i2 |= (b         << 11);
-
-				return new[] { result_i1, result_i2 };
 			}
 			
 			chunk.UpdateMappings();
+			
+			WriteInt32(chunk.Constants.Count);
+			foreach (Constant c in chunk.Constants)
+			{
+				WriteByte((byte)_context.ConstantMapping[(int)c.Type]);
+				switch (c.Type)
+				{
+					case ConstantType.Boolean:
+						WriteBool(c.Data);
+						break;
+					case ConstantType.Number:
+						WriteNumber(c.Data);	
+						break;
+					case ConstantType.String:
+						WriteString(c.Data);
+						break;
+				}
+			}
 			
 			for (int i = 0; i < (int) ChunkStep.StepCount; i++)
 			{
@@ -117,36 +144,11 @@ namespace IronBrew2.Bytecode_Library.Bytecode
 					case ChunkStep.ParameterCount:
 						WriteByte(chunk.ParameterCount);
 						break;
-					case ChunkStep.Constants:
-						WriteInt32(chunk.Constants.Count);
-						foreach (Constant c in chunk.Constants)
-						{
-							WriteByte((byte)_context.ConstantMapping[(int)c.Type]);
-							switch (c.Type)
-							{
-								case ConstantType.Boolean:
-									WriteBool(c.Data);
-									break;
-								case ConstantType.Number:
-									WriteNumber(c.Data);	
-									break;
-								case ConstantType.String:
-									WriteString(c.Data);
-									break;
-							}
-						}
-						break;
 					case ChunkStep.Instructions:
 						WriteInt32(chunk.Instructions.Count);
 						
 						foreach (Instruction ins in chunk.Instructions)
-						{
-							int[] arr = SerializeInstruction(ins);
-							
-							//WriteByte((byte)ins.Instruction.InstructionType);
-							WriteInt32(arr[0] ^ _context.IXorKey1);
-							WriteInt32(arr[1] ^ _context.IXorKey2);
-						}
+							SerializeInstruction(ins);
 						break;
 					case ChunkStep.Functions:
 						WriteInt32(chunk.Functions.Count);

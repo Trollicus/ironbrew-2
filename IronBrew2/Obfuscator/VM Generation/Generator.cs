@@ -415,12 +415,13 @@ local Byte         = string.byte;
 local Char         = string.char;
 local Sub          = string.sub;
 local Concat       = table.concat;
+local Insert       = table.insert;
 local LDExp        = math.ldexp;
 local GetFEnv      = getfenv or function() return _ENV end;
 local Setmetatable = setmetatable;
 local Select       = select;
 
-local Unpack = unpack;
+local Unpack = unpack or table.unpack;
 local ToNumber = tonumber;";
 
 			if (settings.BytecodeCompress)
@@ -454,61 +455,55 @@ local ToNumber = tonumber;";
 			}
 			
 			ComputeConstants(_context.HeadChunk);
-			
-			vm += VMStrings.VMP1.Replace("XOR_KEY", _context.PrimaryXorKey.ToString());
+
+			vm += VMStrings.VMP1
+				.Replace("XOR_KEY", _context.PrimaryXorKey.ToString())
+				.Replace("CONST_BOOL", _context.ConstantMapping[1].ToString())
+				.Replace("CONST_FLOAT", _context.ConstantMapping[2].ToString())
+				.Replace("CONST_STRING", _context.ConstantMapping[3].ToString());
 			
 			for (int i = 0; i < (int) ChunkStep.StepCount; i++)
 			{
 				switch (_context.ChunkSteps[i])
 				{
 					case ChunkStep.ParameterCount:
-						vm += "Chunk[4] = gBits8();";
-						break;
-					case ChunkStep.Constants:
-						vm +=
-							$@"
-								local ConstCount = gBits32()
-    							local Consts = {{{string.Join(",", Enumerable.Repeat(0, maxConstants).Select(x => "0"))}}};
-
-								for Idx=1,ConstCount do 
-									local Type=gBits8();
-									local Cons;
-	
-									if(Type=={_context.ConstantMapping[1]}) then Cons=(gBits8() ~= 0);
-									elseif(Type=={_context.ConstantMapping[2]}) then Cons = gFloat();
-									elseif(Type=={_context.ConstantMapping[3]}) then Cons=gString();
-									end;
-									
-									Consts[Idx]=Cons;
-								end;
-								Chunk[2] = Consts
-								";
+						vm += "Chunk[3] = gBits8();";
 						break;
 					case ChunkStep.Instructions:
 						vm +=
 							$@"for Idx=1,gBits32() do 
-									local Data1=BitXOR(gBits32(),{_context.IXorKey1});
-									local Data2=BitXOR(gBits32(),{_context.IXorKey2}); 
-
-									local Type=gBit(Data1,1,2);
-									local Opco=gBit(Data2,1,11);
-									
-									local Inst=
-									{{
-										Opco,
-										gBit(Data1,3,11),
-										nil,
-										nil,
-										Data2
-									}};
-
-									if (Type == 0) then Inst[OP_B]=gBit(Data1,12,20);Inst[OP_C]=gBit(Data1,21,29);
-									elseif(Type==1) then Inst[OP_B]=gBit(Data2,12,33);
-									elseif(Type==2) then Inst[OP_B]=gBit(Data2,12,32)-1048575;
-									elseif(Type==3) then Inst[OP_B]=gBit(Data2,12,32)-1048575;Inst[OP_C]=gBit(Data1,21,29);
-									end;
-									
-									Instrs[Idx]=Inst;end;";
+									local Descriptor = gBits8();
+									if (gBit(Descriptor, 1, 1) == 0) then
+										local Type = gBit(Descriptor, 2, 3);
+										local Mask = gBit(Descriptor, 4, 6);
+										
+										local Inst=
+										{{
+											gBits16(),
+											gBits16(),
+											nil,
+											nil
+										}};
+	
+										if (Type == 0) then 
+											Inst[OP_B] = gBits16(); 
+											Inst[OP_C] = gBits16();
+										elseif(Type==1) then 
+											Inst[OP_B] = gBits32();
+										elseif(Type==2) then 
+											Inst[OP_B] = gBits32() - (2 ^ 16)
+										elseif(Type==3) then 
+											Inst[OP_B] = gBits32() - (2 ^ 16)
+											Inst[OP_C] = gBits16();
+										end;
+	
+										if (gBit(Mask, 1, 1) == 1) then Inst[OP_A] = Consts[Inst[OP_A]] end
+										if (gBit(Mask, 2, 2) == 1) then Inst[OP_B] = Consts[Inst[OP_B]] end
+										if (gBit(Mask, 3, 3) == 1) then Inst[OP_C] = Consts[Inst[OP_C]] end
+										
+										Instrs[Idx] = Inst;
+									end
+								end;";
 						break;
 					case ChunkStep.Functions:
 						vm += "for Idx=1,gBits32() do Functions[Idx-1]=Deserialize();end;";
@@ -535,8 +530,6 @@ local ToNumber = tonumber;";
 			}
 			
 			ComputeFuncs(_context.HeadChunk);
-			
-			vm = vm.Replace("FUNC_CNT", string.Join(",", Enumerable.Repeat(0, maxFunc).Select(x => "0")));
 
 			int maxInstrs = 0;
 
@@ -550,8 +543,6 @@ local ToNumber = tonumber;";
 			}
 			
 			ComputeInstrs(_context.HeadChunk);
-			
-			vm = vm.Replace("INSTR_CNT", string.Join(",", Enumerable.Repeat(0, maxInstrs).Select(x => "0")));
 			
 			string GetStr(List<int> opcodes)
 			{
@@ -597,9 +588,7 @@ local ToNumber = tonumber;";
 			vm = vm.Replace("OP_ENUM", "1")
 				.Replace("OP_A", "2")
 				.Replace("OP_B", "3")
-				.Replace("OP_BX", "4")
-				.Replace("OP_C", "5")
-				.Replace("OP_DATA", "6");
+				.Replace("OP_C", "4");
 
 			
 			return vm;

@@ -14,6 +14,7 @@ namespace IronBrew2.Bytecode_Library.IR
 		public Chunk Chunk;
 		public Opcode OpCode;
 		public InstructionType InstructionType;
+		public InstructionConstantMask ConstantMask;
 
 		public int A;
 		public int B;

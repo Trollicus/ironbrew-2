@@ -12,7 +12,6 @@ namespace IronBrew2.Obfuscator
 		ParameterCount,
 		StringTable,
 		Instructions,
-		Constants,
 		Functions,
 		LineInfo,
 		StepCount

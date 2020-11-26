@@ -24,9 +24,9 @@ namespace IronBrew2.Obfuscator
 			PreserveLineInfo = false;
 			Mutate = true;
 			SuperOperators = true;
-			MaxMegaSuperOperators = 200;
-			MaxMiniSuperOperators = 150;
-			MaxMutations = 300;
+			MaxMegaSuperOperators = 120;
+			MaxMiniSuperOperators = 120;
+			MaxMutations = 200;
 		}
 	}
 }

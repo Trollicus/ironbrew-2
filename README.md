@@ -1,2 +1,2 @@
-# ironbrew-2
-some vm obfuscation lua thing
+#IronBrew 2
+VM-based Lua 5.1 obfuscation.
