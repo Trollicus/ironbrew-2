@@ -10,6 +10,8 @@ namespace IronBrew2_CLI
 	{
 		static void Main(string[] args)
 		{
+			if (Directory.Exists("temp"))
+				Directory.Delete("temp", true);
 			Directory.CreateDirectory("temp");
 			if (!IB2.Obfuscate("temp",  args[0], new ObfuscationSettings(), out string err))
 			{
@@ -19,7 +21,6 @@ namespace IronBrew2_CLI
 
 			File.Delete("out.lua");
 			File.Move("temp/out.lua", "out.lua");
-			Directory.Delete("temp", true);
 			Console.WriteLine("Done!");
 		}
 	}

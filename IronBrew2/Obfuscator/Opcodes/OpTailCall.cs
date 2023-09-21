@@ -9,7 +9,14 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.TailCall && instruction.B > 1;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"local A=Inst[OP_A];local Args={};local Limit=A+Inst[OP_B]-1;for Idx=A+1,Limit do Args[#Args+1]=Stk[Idx];end;do return Stk[A](Unpack(Args,1,Limit-A)) end;";
+			@"
+local A = Inst[OP_A];
+do return Stk[A](Unpack(Stk, A + 1, Inst[OP_B])) end;";
+
+		public override void Mutate(Instruction instruction)
+		{
+			instruction.B += instruction.A - 1;
+		}
 	}
 	
 	public class OpTailCallB0 : VOpcode
@@ -18,7 +25,10 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.TailCall && instruction.B == 0;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"local A=Inst[OP_A];local Args={};local Limit=Top;for Idx=A+1,Limit do Args[#Args+1]=Stk[Idx];end;do return Stk[A](Unpack(Args,1,Limit-A)) end;";
+			@"
+local A = Inst[OP_A];
+do return Stk[A](Unpack(Stk, A + 1, Top)) end;
+";
 	}
 	
 	public class OpTailCallB1 : VOpcode
@@ -27,6 +37,6 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.TailCall && instruction.B == 1;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"local A=Inst[OP_A];do return Stk[A](); end;";
+			"do return Stk[Inst[OP_A]](); end;";
 	}
 }

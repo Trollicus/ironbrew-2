@@ -18,10 +18,13 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.Pow && instruction.B > 255 && instruction.C <= 255;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"Stk[Inst[OP_A]]=Const[Inst[OP_B]]^Stk[Inst[OP_C]];";
+			"Stk[Inst[OP_A]]= Inst[OP_B] ^ Stk[Inst[OP_C]];";
 
-		public override void Mutate(Instruction instruction) =>
+		public override void Mutate(Instruction instruction)
+		{
 			instruction.B -= 255;
+			instruction.ConstantMask |= InstructionConstantMask.RB;
+		}
 	}
 	
 	public class OpPowC : VOpcode
@@ -30,10 +33,13 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.Pow && instruction.B <= 255 && instruction.C > 255;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"Stk[Inst[OP_A]]=Stk[Inst[OP_B]]^Const[Inst[OP_C]];";
+			"Stk[Inst[OP_A]]= Stk[Inst[OP_B]]^ Inst[OP_C];";
 
-		public override void Mutate(Instruction instruction) =>
+		public override void Mutate(Instruction instruction)
+		{
 			instruction.C -= 255;
+			instruction.ConstantMask |= InstructionConstantMask.RC;
+		}
 	}
 	
 	public class OpPowBC : VOpcode
@@ -42,12 +48,13 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.Pow && instruction.B > 255 && instruction.C > 255;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"Stk[Inst[OP_A]]=Const[Inst[OP_B]]^Const[Inst[OP_C]];";
+			"Stk[Inst[OP_A]] = Inst[OP_B] ^ Inst[OP_C];";
 
 		public override void Mutate(Instruction instruction)
 		{
 			instruction.B -= 255;
 			instruction.C -= 255;
+			instruction.ConstantMask |= InstructionConstantMask.RB | InstructionConstantMask.RC;
 		}
 	}
 }

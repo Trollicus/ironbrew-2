@@ -9,9 +9,12 @@ namespace IronBrew2.Obfuscator.Opcodes
 			instruction.OpCode == Opcode.GetGlobal;
 
 		public override string GetObfuscated(ObfuscationContext context) =>
-			"Stk[Inst[OP_A]]=Env[Const[Inst[OP_B]]];";
-		
-		public override void Mutate(Instruction instruction) =>
+			"Stk[Inst[OP_A]]=Env[Inst[OP_B]];";
+
+		public override void Mutate(Instruction instruction)
+		{
 			instruction.B++;
+			instruction.ConstantMask |= InstructionConstantMask.RB;
+		}
 	}
 }
